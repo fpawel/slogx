@@ -1,4 +1,4 @@
-package attr
+package slogx
 
 import (
 	"log/slog"
