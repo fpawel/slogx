@@ -3,8 +3,42 @@ package slogtest
 import (
 	"context"
 	"log/slog"
+	"os"
 	"sync"
+	"testing"
 )
+
+// NewTestLogger creates a test logger with an in-memory handler.
+// It returns a *slog.Logger and the associated *ObservedHandler for inspection.
+// Typically used in unit tests for verifying log output.
+//
+// Example:
+//
+//	logger, observed := slogtest.NewTestLogger(t)
+//	logger.Info("hello", slog.String("key", "value"))
+//	logs := observed.Logs()
+func NewTestLogger(t *testing.T) (*slog.Logger, *ObservedHandler) {
+	t.Helper()
+	h := NewObservedHandler()
+	return slog.New(h), h
+}
+
+// NewStdoutTextHandlerWithoutTimestamp creates slog.Handler that prints log records in a text format without
+// time stamp to standard output.
+// It is created using slog.NewTextHandler and is configured with custom handler options.
+// The key feature is the ReplaceAttr function, which removes the timestamp attribute from each log entry,
+// so all logs printed by this handler will not include timestamps.
+// This is useful for testing or when timestamps are not needed in the log output.
+func NewStdoutTextHandlerWithoutTimestamp() slog.Handler {
+	return slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey {
+				return slog.Attr{} // удалить
+			}
+			return a
+		},
+	})
+}
 
 // ObservedLog represents a single captured log entry.
 // It includes the log level, message, attributes, and any active groups.
