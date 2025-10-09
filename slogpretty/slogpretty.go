@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/mattn/go-isatty"
 	"io"
 	"log"
 	"log/slog"
@@ -13,6 +11,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	"github.com/fatih/color"
+	"github.com/fpawel/slogx/internal"
+	"github.com/mattn/go-isatty"
 )
 
 // PrettyHandler is a custom slog.Handler that provides human-friendly,
@@ -43,19 +45,7 @@ type RewriteAttrFunc func(groups []string, a slog.Attr) slog.Attr
 // FormatAttrsFunc formats attributes as a string for log output.
 type FormatAttrsFunc func(map[string]any) string
 
-const DefaultTimeLayout = "15:04:05"
-
 var (
-	levelsInfo = map[slog.Level]struct {
-		text      string
-		colorFunc func(string, ...interface{}) string
-	}{
-		slog.LevelDebug: {"DEBUG", color.MagentaString},
-		slog.LevelInfo:  {"INFO ", color.BlueString},
-		slog.LevelWarn:  {"WARN ", color.YellowString},
-		slog.LevelError: {"ERROR", color.RedString},
-	}
-
 	// partsPool is used to reuse temporary slices for log message parts.
 	partsPool = sync.Pool{
 		New: func() any { return make([]interface{}, 0, 8) },
@@ -68,7 +58,7 @@ var (
 func NewPrettyHandler() *PrettyHandler {
 	return &PrettyHandler{
 		Logger:          log.New(os.Stderr, "", 0),
-		TimestampFormat: DefaultTimeLayout,
+		TimestampFormat: internal.DefaultTimeLayout,
 		Level:           slog.LevelDebug,
 		EnableColor:     isatty.IsTerminal(os.Stderr.Fd()),
 		FormatAttrsFunc: jsonAttrFormatter,
@@ -217,15 +207,7 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 
 // formatLevelLabel returns the formatted log level label, with color if enabled.
 func (h *PrettyHandler) formatLevelLabel(r slog.Record) string {
-	info, ok := levelsInfo[r.Level.Level()]
-	label := r.Level.String()
-	if ok && info.text != "" {
-		label = info.text
-	}
-	if h.EnableColor && info.colorFunc != nil {
-		return info.colorFunc(label)
-	}
-	return fmt.Sprintf("%-5s", label)
+	return internal.FormatLevelLabel(r, h.EnableColor)
 }
 
 // renderAttrs collects and formats attributes for a log record.
@@ -281,18 +263,8 @@ func formatSourceInfo(r slog.Record) string {
 	}
 	funcName = filepath.Base(funcName)
 	file = filepath.Base(file)
-	if i := lastDot(funcName); i >= 0 {
+	if i := internal.LastDot(funcName); i >= 0 {
 		funcName = funcName[i:]
 	}
 	return fmt.Sprintf("%s:%d%s", file, f.Line, funcName)
-}
-
-// lastDot returns the index of the last dot in a string, or -1 if not found.
-func lastDot(s string) int {
-	for i := len(s) - 1; i >= 0; i-- {
-		if s[i] == '.' {
-			return i
-		}
-	}
-	return -1
 }
