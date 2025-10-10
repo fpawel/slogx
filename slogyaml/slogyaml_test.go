@@ -25,7 +25,7 @@ func TestYAMLHandler_basic_test(t *testing.T) {
 			},
 		)
 
-	require.Equal(t, `- INFO  Hello, world!:
+	require.Equal(t, `- Hello, world!:
     - group-name:
         - user: alice
         - id: 12
@@ -56,7 +56,7 @@ func ExampleYAMLHandler_basic_test() {
 			},
 		)
 	// Output:
-	// - INFO  Hello, world!:
+	// - Hello, world!:
 	//     - group-name:
 	//         - user: alice
 	//         - id: 12

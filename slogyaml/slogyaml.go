@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/fpawel/slogx/internal"
 	"gopkg.in/yaml.v3"
@@ -20,6 +19,7 @@ type YAMLHandler struct {
 	TimestampFormat string          // Format for timestamps (default: "15:04:05")
 	Level           slog.Leveler    // Minimum log level to output
 	AddSource       bool            // If true, includes file and line number in logs
+	AddLevel        bool            // If true, includes level in logs
 	BaseAttrs       []slog.Attr     // Default attributes added to every log record
 	AttrGroups      []string        // Attribute group nesting for structured logs
 	RewriteAttrFunc RewriteAttrFunc // Optional function to rewrite attributes before output
@@ -83,6 +83,13 @@ func (h *YAMLHandler) WithSourceInfo(v bool) *YAMLHandler {
 	return clone
 }
 
+// WithLevel returns a copy of the handler with level enabled or disabled.
+func (h *YAMLHandler) WithLevel(v bool) *YAMLHandler {
+	clone := h.clone()
+	clone.AddLevel = v
+	return clone
+}
+
 // WithAttrRewriter returns a copy of the handler with a new attribute rewriter.
 func (h *YAMLHandler) WithAttrRewriter(f RewriteAttrFunc) *YAMLHandler {
 	clone := h.clone()
@@ -115,36 +122,27 @@ func (h *YAMLHandler) Handle(_ context.Context, r slog.Record) error {
 		return fmt.Errorf("logger is not initialized")
 	}
 
-	var messagePart strings.Builder
-	if h.TimestampFormat != "" {
-		messagePart.WriteString(r.Time.Format(h.TimestampFormat))
-		messagePart.WriteString(" ")
-	}
-	messagePart.WriteString(internal.FormatLevelLabel(r, false))
-	messagePart.WriteString(" ")
-	messagePart.WriteString(r.Message)
+	var data []any
 
-	dataPart := h.collectAttrs(r)
+	if h.TimestampFormat != "" {
+		data = append(data, r.Time.Format(h.TimestampFormat))
+	}
+	if h.AddLevel {
+		data = append(data, internal.FormatLevelLabel(r, false))
+	}
 	if h.AddSource && r.PC != 0 {
 		if src := formatSourceInfo(r); src != "" {
-			dataPart = append(dataPart, src)
+			data = append(data, src)
 		}
 	}
-
-	var yamlData []any
-	if len(dataPart) == 0 {
-		yamlData = append(yamlData, messagePart.String())
-	} else {
-		yamlData = append(yamlData, map[string]any{
-			messagePart.String(): dataPart,
-		})
-	}
-	yamlBytes, err := yaml.Marshal(yamlData)
+	data = append(data, h.collectAttrs(r)...)
+	data = []any{map[string]any{r.Message: h.collectAttrs(r)}}
+	raw, err := yaml.Marshal(data)
 	if err != nil {
-		yamlBytes, _ = yaml.Marshal(map[string]string{"error": fmt.Sprintf("failed to format message: %s", err)})
+		raw, _ = yaml.Marshal(map[string]string{"error": fmt.Sprintf("failed to format message: %s", err)})
 	}
 
-	h.Logger.Printf("%s", yamlBytes)
+	h.Logger.Printf("%s", raw)
 
 	return nil
 }
