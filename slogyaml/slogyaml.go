@@ -136,7 +136,7 @@ func (h *YAMLHandler) Handle(_ context.Context, r slog.Record) error {
 		}
 	}
 	data = append(data, h.collectAttrs(r)...)
-	data = []any{map[string]any{r.Message: h.collectAttrs(r)}}
+	data = []any{map[string]any{r.Message: data}}
 	raw, err := yaml.Marshal(data)
 	if err != nil {
 		raw, _ = yaml.Marshal(map[string]string{"error": fmt.Sprintf("failed to format message: %s", err)})
