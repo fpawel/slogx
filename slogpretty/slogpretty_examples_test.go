@@ -13,9 +13,9 @@ func ExampleNewPrettyHandler_basic() {
 		WithTimeLayout("").
 		WithWriter(os.Stdout)
 	logger := slog.New(h)
-	logger.Info("Hello, world!", slog.String("user", "alice"))
+	logger.Info("Hello, world!", slog.String("user", "alice"), "user", "bob")
 	// Output:
-	// INFO  Hello, world! {"user":"alice"}
+	// INFO  Hello, world! {"user":["alice","bob"]}
 }
 
 // Example: вывод с атрибутами и группами

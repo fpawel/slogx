@@ -169,7 +169,7 @@ func flattenAttrs(attrs []slog.Attr, groups []string, replace func([]string, slo
 		if replace != nil {
 			a = replace(groups, a)
 		}
-		var v = a.Value.Any()
+		v := a.Value.Any()
 		if a.Value.Kind() == slog.KindGroup {
 			v = flattenAttrs(a.Value.Group(), append(groups, a.Key), replace)
 		}

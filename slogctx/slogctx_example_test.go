@@ -2,8 +2,9 @@ package slogctx
 
 import (
 	"fmt"
-	"github.com/fpawel/slogx/slogtest"
 	"log/slog"
+
+	"github.com/fpawel/slogx/slogtest"
 )
 
 // ExampleWith demonstrates adding and removing logging attributes via context.

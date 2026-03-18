@@ -194,10 +194,12 @@ func TestPrettyHandler_renderAttrs(t *testing.T) {
 func getCallerPC() (uintptr, string, int, bool) {
 	return getCallerPCDepth(1)
 }
+
 func getCallerPCDepth(depth int) (uintptr, string, int, bool) {
 	pc, file, line, ok := getCaller(depth + 1)
 	return pc, file, line, ok
 }
+
 func getCaller(depth int) (uintptr, string, int, bool) {
 	var pcs [1]uintptr
 	n := runtime.Callers(depth+2, pcs[:])

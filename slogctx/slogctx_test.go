@@ -2,10 +2,11 @@ package slogctx
 
 import (
 	"context"
-	"github.com/fpawel/slogx/slogtest"
 	"log/slog"
 	"reflect"
 	"testing"
+
+	"github.com/fpawel/slogx/slogtest"
 
 	"github.com/stretchr/testify/require"
 )

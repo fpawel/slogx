@@ -45,12 +45,10 @@ type RewriteAttrFunc func(groups []string, a slog.Attr) slog.Attr
 // FormatAttrsFunc formats attributes as a string for log output.
 type FormatAttrsFunc func(map[string]any) string
 
-var (
-	// partsPool is used to reuse temporary slices for log message parts.
-	partsPool = sync.Pool{
-		New: func() any { return make([]interface{}, 0, 8) },
-	}
-)
+// partsPool is used to reuse temporary slices for log message parts.
+var partsPool = sync.Pool{
+	New: func() any { return make([]interface{}, 0, 8) },
+}
 
 // NewPrettyHandler creates a new PrettyHandler with default settings.
 //
@@ -238,10 +236,19 @@ func flattenAttrs(attrs []slog.Attr, groups []string, replace func([]string, slo
 		if replace != nil {
 			a = replace(groups, a)
 		}
+		value := a.Value.Any()
 		if a.Value.Kind() == slog.KindGroup {
-			out[a.Key] = flattenAttrs(a.Value.Group(), append(groups, a.Key), replace)
+			value = flattenAttrs(a.Value.Group(), append(groups, a.Key), replace)
+		}
+		if v, ok := out[a.Key]; ok {
+			xs, ok := v.([]any)
+			if ok {
+				out[a.Key] = append(xs, value)
+			} else {
+				out[a.Key] = []any{v, value}
+			}
 		} else {
-			out[a.Key] = a.Value.Any()
+			out[a.Key] = value
 		}
 	}
 	return out
