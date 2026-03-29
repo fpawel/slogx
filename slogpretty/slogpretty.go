@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/TylerBrock/colorjson"
 	"github.com/fatih/color"
 	"github.com/fpawel/slogx/internal"
 	"github.com/mattn/go-isatty"
@@ -73,7 +74,7 @@ func jsonAttrFormatter(m map[string]any) string {
 	if len(m) == 0 {
 		return ""
 	}
-	b, err := json.Marshal(m)
+	b, err := colorjson.Marshal(m)
 	if err != nil {
 		b, _ = json.Marshal(map[string]string{"error": fmt.Sprintf("failed to format attributes: %s", err)})
 	}

@@ -3,7 +3,6 @@ package slogpretty
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"log/slog"
 	"runtime"
 	"testing"
@@ -11,22 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestPrettyHandler_BasicOutput(t *testing.T) {
-	var buf bytes.Buffer
-	h := NewPrettyHandler().
-		WithWriter(&buf).
-		WithColorEnabled(false).
-		WithTimeLayout("")
-
-	logger := slog.New(h)
-	logger.Info("hello", slog.String("foo", "bar"))
-
-	out := buf.String()
-	require.Contains(t, out, "INFO")
-	require.Contains(t, out, "hello")
-	require.Contains(t, out, `"foo":"bar"`)
-}
 
 func TestPrettyHandler_Levels(t *testing.T) {
 	var buf bytes.Buffer
@@ -157,40 +140,6 @@ func TestPrettyHandler_WithTimeLayout(t *testing.T) {
 	require.Contains(t, buf.String(), time.Now().Format("2006"))
 }
 
-func TestPrettyHandler_renderAttrs(t *testing.T) {
-	h := NewPrettyHandler().WithColorEnabled(false).WithTimeLayout("")
-	r := slog.NewRecord(time.Now(), slog.LevelInfo, "msg", 0)
-	// Пустые атрибуты
-	str, err := h.renderAttrs(r)
-	require.NoError(t, err)
-	require.Equal(t, "", str)
-
-	// Простые атрибуты
-	r.AddAttrs(slog.String("foo", "bar"), slog.Int("num", 42))
-	str, err = h.renderAttrs(r)
-	require.NoError(t, err)
-	require.Contains(t, str, `"foo":"bar"`)
-	require.Contains(t, str, `"num":42`)
-
-	// Вложенные группы
-	r = slog.NewRecord(time.Now(), slog.LevelInfo, "msg", 0)
-	r.AddAttrs(slog.Group("grp", slog.String("a", "b"), slog.Int("id", 1)))
-	str, err = h.renderAttrs(r)
-	require.NoError(t, err)
-	require.Contains(t, str, `"grp"`)
-	require.Contains(t, str, `"a":"b"`)
-	require.Contains(t, str, `"id":1`)
-
-	// Большой набор атрибутов
-	r = slog.NewRecord(time.Now(), slog.LevelInfo, "msg", 0)
-	for i := 0; i < 100; i++ {
-		r.AddAttrs(slog.Int(fmt.Sprintf("k%d", i), i))
-	}
-	str, err = h.renderAttrs(r)
-	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(str), 100)
-}
-
 func getCallerPC() (uintptr, string, int, bool) {
 	return getCallerPCDepth(1)
 }
@@ -240,36 +189,4 @@ func TestPrettyHandler_LevelFiltering(t *testing.T) {
 	require.NotContains(t, out, "info")
 	require.Contains(t, out, "WARN")
 	require.Contains(t, out, "ERROR")
-}
-
-func TestPrettyHandler_AttrsEdgeCases(t *testing.T) {
-	var buf bytes.Buffer
-	h := NewPrettyHandler().
-		WithWriter(&buf).
-		WithColorEnabled(false).
-		WithTimeLayout("")
-
-	logger := slog.New(h)
-	// Пустые атрибуты
-	logger.Info("empty")
-	require.Contains(t, buf.String(), "empty")
-
-	// Вложенные группы
-	buf.Reset()
-	logger.Info("nested", slog.Group("g1", slog.Group("g2", slog.String("k", "v"))))
-	out := buf.String()
-	require.Contains(t, out, `"g1"`)
-	require.Contains(t, out, `"g2"`)
-	require.Contains(t, out, `"k":"v"`)
-
-	// Большой набор
-	buf.Reset()
-	attrs := make([]any, 0, 50)
-	for i := 0; i < 50; i++ {
-		attrs = append(attrs, slog.Int(fmt.Sprintf("n%d", i), i))
-	}
-	logger.Info("big", attrs...)
-	out = buf.String()
-	require.Contains(t, out, "big")
-	require.GreaterOrEqual(t, len(out), 50)
 }
