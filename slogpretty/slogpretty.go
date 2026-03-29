@@ -1,6 +1,7 @@
 package slogpretty
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -37,7 +38,6 @@ type PrettyHandler struct {
 	AttrGroups      []string        // Attribute group nesting for structured logs
 	EnableColor     bool            // Enables color output if true
 	RewriteAttrFunc RewriteAttrFunc // Optional function to rewrite attributes before output
-	FormatAttrsFunc FormatAttrsFunc // Function to format attributes as a string
 }
 
 // RewriteAttrFunc allows rewriting or filtering attributes before output.
@@ -60,7 +60,6 @@ func NewPrettyHandler() *PrettyHandler {
 		TimestampFormat: internal.DefaultTimeLayout,
 		Level:           slog.LevelDebug,
 		EnableColor:     isatty.IsTerminal(os.Stderr.Fd()),
-		FormatAttrsFunc: jsonAttrFormatter,
 	}
 }
 
@@ -69,14 +68,30 @@ func SetPrettyHandlerAsDefault() {
 	slog.SetDefault(slog.New(NewPrettyHandler()))
 }
 
+func jsonifyErr(err error) string {
+	b, _ := json.Marshal(map[string]string{"error": err.Error()})
+	return string(b)
+}
+
 // jsonAttrFormatter formats attributes as "{key1:value1 key2:value2}".
-func jsonAttrFormatter(m map[string]any) string {
+func (h *PrettyHandler) jsonAttrFormatter(m map[string]any) string {
 	if len(m) == 0 {
 		return ""
 	}
-	b, err := jsoncolor.Marshal(m)
+
+	if h.EnableColor && jsoncolor.IsColorTerminal(h.Logger.Writer()) {
+		buf := bytes.NewBuffer(nil)
+		enc := jsoncolor.NewEncoder(buf)
+		enc.SetColors(jsoncolor.DefaultColors())
+		if err := enc.Encode(m); err != nil {
+			return jsonifyErr(fmt.Errorf("failed to marshall JSON attributes: %w", err))
+		}
+		return buf.String()
+	}
+
+	b, err := json.Marshal(m)
 	if err != nil {
-		b, _ = json.Marshal(map[string]string{"error": fmt.Sprintf("failed to format attributes: %s", err)})
+		return jsonifyErr(fmt.Errorf("failed to marshall JSON attributes: %w", err))
 	}
 	return string(b)
 }
@@ -92,7 +107,6 @@ func (h *PrettyHandler) clone() *PrettyHandler {
 		BaseAttrs:       append([]slog.Attr(nil), h.BaseAttrs...),
 		AttrGroups:      append([]string(nil), h.AttrGroups...),
 		EnableColor:     h.EnableColor,
-		FormatAttrsFunc: h.FormatAttrsFunc,
 	}
 }
 
@@ -143,13 +157,6 @@ func (h *PrettyHandler) WithAttrRewriter(f RewriteAttrFunc) *PrettyHandler {
 func (h *PrettyHandler) WithColorEnabled(enabled bool) *PrettyHandler {
 	clone := h.clone()
 	clone.EnableColor = enabled
-	return clone
-}
-
-// WithAttrFormatter returns a copy of the handler with a new attribute formatter.
-func (h *PrettyHandler) WithAttrFormatter(f FormatAttrsFunc) *PrettyHandler {
-	clone := h.clone()
-	clone.FormatAttrsFunc = f
 	return clone
 }
 
@@ -227,7 +234,7 @@ func (h *PrettyHandler) renderAttrs(r slog.Record) (string, error) {
 		m = map[string]any{h.AttrGroups[i]: m}
 	}
 
-	return h.colorize(h.FormatAttrsFunc(m), color.WhiteString), nil
+	return h.jsonAttrFormatter(m), nil
 }
 
 // flattenAttrs flattens attributes and groups into a map for formatting.

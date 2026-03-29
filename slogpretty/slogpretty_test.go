@@ -46,23 +46,6 @@ func TestPrettyHandler_WithSourceInfo(t *testing.T) {
 	t.Log(out)
 }
 
-func TestPrettyHandler_WithAttrFormatter(t *testing.T) {
-	var buf bytes.Buffer
-	h := NewPrettyHandler().
-		WithWriter(&buf).
-		WithColorEnabled(false).
-		WithAttrFormatter(func(m map[string]any) string {
-			return "ATTRS"
-		}).
-		WithTimeLayout("")
-
-	logger := slog.New(h)
-	logger.Info("test", slog.String("foo", "bar"))
-
-	out := buf.String()
-	require.Contains(t, out, "ATTRS")
-}
-
 func TestPrettyHandler_WithAttrRewriter(t *testing.T) {
 	var buf bytes.Buffer
 	h := NewPrettyHandler().

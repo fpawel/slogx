@@ -1,7 +1,6 @@
 package slogpretty
 
 import (
-	"bytes"
 	"log/slog"
 	"os"
 )
@@ -35,22 +34,4 @@ func ExampleNewPrettyHandler_withAttrsAndGroups() {
 	)
 	// Output:
 	// INFO  Order created {"order":{"id":123,"status":"paid"},"user":"bob"}
-}
-
-// Example: кастомный форматтер атрибутов
-func ExamplePrettyHandler_WithAttrFormatter() {
-	var buf bytes.Buffer
-	h := NewPrettyHandler().
-		WithWriter(&buf).
-		WithColorEnabled(false).
-		WithAttrFormatter(func(m map[string]any) string {
-			return "ATTRS"
-		}).
-		WithTimeLayout("").
-		WithWriter(os.Stdout)
-	logger := slog.New(h)
-	logger.Info("Test", slog.String("foo", "bar"))
-	os.Stdout.Write(buf.Bytes())
-	// Output:
-	// INFO  Test ATTRS
 }
