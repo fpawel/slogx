@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/fatih/color"
@@ -86,7 +87,7 @@ func (h *PrettyHandler) jsonAttrFormatter(m map[string]any) string {
 		if err := enc.Encode(m); err != nil {
 			return jsonifyErr(fmt.Errorf("failed to marshall JSON attributes: %w", err))
 		}
-		return buf.String()
+		return strings.TrimSpace(buf.String())
 	}
 
 	b, err := json.Marshal(m)
