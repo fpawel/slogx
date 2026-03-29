@@ -15,7 +15,7 @@ func ExampleNewPrettyHandler_basic() {
 	logger := slog.New(h)
 	logger.Info("Hello, world!", slog.String("user", "alice"), "user", "bob")
 	// Output:
-	// INFO  Hello, world! { "user": [ "alice", "bob" ] }
+	// INFO  Hello, world! {"user":["alice","bob"]}
 }
 
 // Example: вывод с атрибутами и группами
